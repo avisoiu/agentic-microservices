@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: prompt-registry
+spec:
+  selector:
+    app: prompt-registry
+  ports:
+    - name: http
+      port: 8000
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prompt-registry-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prompt-registry
+spec:
+  replicas: 1 # SQLite on an RWO volume: single writer only
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prompt-registry
+  template:
+    metadata:
+      labels:
+        app: prompt-registry
+    spec:
+      containers:
+        - name: prompt-registry
+          image: agent-stack/prompt-registry:dev
+          imagePullPolicy: Never # loaded into kind by scripts/cluster-up.sh
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: stack-env
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: prompt-registry
+            - name: PROMPT_DB_PATH
+              value: /data/prompts.db
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: prompt-registry-data

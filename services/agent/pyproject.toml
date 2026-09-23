@@ -1,0 +1,17 @@
+[project]
+name = "agent"
+version = "0.1.0"
+description = "Demo agent harness: prompt registry + memory + LLM proxy + MCP tools"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "httpx>=0.27",
+    "opentelemetry-distro>=0.48b0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.27",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-httpx>=0.48b0",
+]
+
+[tool.uv]
+package = false

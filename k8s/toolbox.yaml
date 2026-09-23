@@ -1,0 +1,61 @@
+# Google MCP Toolbox: exposes the tools in config/toolbox.yaml over MCP (streamable
+# HTTP) at http://toolbox:5000/mcp. Off-the-shelf binary, no custom code.
+apiVersion: v1
+kind: Service
+metadata:
+  name: toolbox
+spec:
+  selector:
+    app: toolbox
+  ports:
+    - name: http
+      port: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toolbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: toolbox
+  template:
+    metadata:
+      labels:
+        app: toolbox
+    spec:
+      containers:
+        - name: toolbox
+          image: us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:1.12.0
+          args:
+            - --config=/conf/tools.yaml
+            - --address=0.0.0.0
+            - --port=5000
+            - --telemetry-otlp=otel-collector:4318 # host:port only; a scheme breaks URL parsing
+            - --telemetry-service-name=toolbox
+            - --allowed-hosts=toolbox,toolbox:5000,localhost:5000
+          ports:
+            - containerPort: 5000
+          env:
+            - name: OTEL_EXPORTER_OTLP_INSECURE # the exporter defaults to https
+              value: "true"
+            - name: GITHUB_AUTHORIZATION
+              valueFrom:
+                secretKeyRef:
+                  name: llm-secrets
+                  key: GITHUB_AUTHORIZATION
+          readinessProbe:
+            tcpSocket:
+              port: 5000
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+      volumes:
+        - name: config
+          configMap:
+            name: toolbox-config

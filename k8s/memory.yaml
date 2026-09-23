@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: memory
+spec:
+  selector:
+    app: memory
+  ports:
+    - name: http
+      port: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memory
+  template:
+    metadata:
+      labels:
+        app: memory
+    spec:
+      containers:
+        - name: memory
+          image: agent-stack/memory:dev
+          imagePullPolicy: Never # loaded into kind by scripts/cluster-up.sh
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: stack-env
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: memory
+            - name: SESSION_TTL_SECONDS
+              value: "3600"
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 3
+            failureThreshold: 40
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }

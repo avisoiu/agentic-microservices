@@ -1,0 +1,12 @@
+# Single-node kind cluster. NodePorts are mapped to the host so the demo agent
+# and the Jaeger UI are reachable at localhost without port-forwarding.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: agents
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080 # agent
+        hostPort: 8080
+      - containerPort: 30686 # jaeger UI
+        hostPort: 16686
