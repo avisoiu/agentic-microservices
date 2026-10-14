@@ -1,0 +1,12 @@
+[project]
+name = "langgraph-agent"
+version = "0.1.0"
+description = "Minimal LangGraph agent that talks to the LiteLLM proxy"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "langgraph",
+    "langchain-openai",
+    "httpx",
+]

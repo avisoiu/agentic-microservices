@@ -1,0 +1,86 @@
+{
+  "sla_version": "v2.0",
+  "customerID": "Admin",
+  "applications": [
+    {
+      "applicationID": "",
+      "application_name": "agentstack",
+      "application_namespace": "default",
+      "application_desc": "Agentic microservice stack",
+      "microservices": [
+        {
+          "microserviceID": "",
+          "microservice_name": "ollama",
+          "microservice_namespace": "default",
+          "virtualization": "container",
+          "code": "docker.io/ollama/ollama:0.12.3",
+          "cmd": [
+            "sh",
+            "-c",
+            "ollama serve & pid=$!; until ollama list >/dev/null 2>&1; do sleep 1; done; ollama pull qwen2.5:0.5b && ollama pull nomic-embed-text; wait $pid"
+          ],
+          "environment": [
+            "OLLAMA_HOST=0.0.0.0:11434"
+          ],
+          "memory": 2048,
+          "vcpu": 2,
+          "vgpu": 0,
+          "storage": 0,
+          "bandwidth_in": 0,
+          "bandwidth_out": 0,
+          "addresses": {
+            "rr_ip": "10.30.10.1"
+          },
+          "constraints": []
+        },
+        {
+          "microserviceID": "",
+          "microservice_name": "llmproxy",
+          "microservice_namespace": "default",
+          "virtualization": "container",
+          "code": "ghcr.io/berriai/litellm:v1.101.0",
+          "cmd": [
+            "sh",
+            "-c",
+            "cat > /tmp/litellm.yaml <<'EOF'\nmodel_list:\n  - model_name: agent-model\n    litellm_params:\n      model: ollama_chat/qwen2.5:0.5b\n      api_base: os.environ/OLLAMA_API_BASE\n      keep_alive: 30m\n  - model_name: embed-model\n    litellm_params:\n      model: ollama/nomic-embed-text\n      api_base: os.environ/OLLAMA_API_BASE\nrouter_settings:\n  num_retries: 0\n  timeout: 180\nlitellm_settings:\n  drop_params: true\nEOF\nexec litellm --config /tmp/litellm.yaml --port 4000"
+          ],
+          "environment": [
+            "OLLAMA_API_BASE=http://10.30.10.1:11434"
+          ],
+          "memory": 2048,
+          "vcpu": 1,
+          "vgpu": 0,
+          "storage": 0,
+          "bandwidth_in": 0,
+          "bandwidth_out": 0,
+          "addresses": {
+            "rr_ip": "10.30.10.2"
+          },
+          "constraints": []
+        },
+        {
+          "microserviceID": "",
+          "microservice_name": "agent",
+          "microservice_namespace": "default",
+          "virtualization": "container",
+          "code": "docker.io/agent-stack/langgraph-agent:dev",
+          "environment": [
+            "LLM_PROXY_URL=http://10.30.10.2:4000",
+            "AGENT_MODEL=agent-model"
+          ],
+          "port": "8000:8000",
+          "memory": 512,
+          "vcpu": 1,
+          "vgpu": 0,
+          "storage": 0,
+          "bandwidth_in": 0,
+          "bandwidth_out": 0,
+          "addresses": {
+            "rr_ip": "10.30.10.3"
+          },
+          "constraints": []
+        }
+      ]
+    }
+  ]
+}
